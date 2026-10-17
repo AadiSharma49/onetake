@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Mirrors the Clerk user. clerkId is the join key between Clerk (identity)
+// and Postgres (everything OneTake-specific hangs off this row).
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+}
+
+enum ProjectStatus {
+  DRAFT
+  RECORDING
+  PROCESSING
+  READY
+}
+
+model Project {
+  id               String        @id @default(cuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  timeLimitSeconds Int
+  status           ProjectStatus @default(DRAFT)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  points     Point[]
+  recordings Recording[]
+  renders    Render[]
+}
+
+// One point the finished video must cover. `covered` flips as the live
+// tracker detects it while recording, or after a missed-point rescue clip.
+model Point {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  text      String
+  order     Int
+  covered   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// A captured take: screen/cam/mic as separate tracks so layout can change later.
+// A project can have more than one (missed-point rescue adds another).
+model Recording {
+  id              String   @id @default(cuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  screenUrl       String?
+  camUrl          String?
+  micUrl          String?
+  durationSeconds Int?
+  createdAt       DateTime @default(now())
+}
+
+enum RenderStatus {
+  QUEUED
+  PROCESSING
+  DONE
+  FAILED
+}
+
+// Output of the auto-fit/edit pipeline for a project. Re-renders (after a
+// rescue clip, say) create a new row rather than overwriting the last one.
+model Render {
+  id        String       @id @default(cuid())
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  outputUrl String?
+  srtUrl    String?
+  status    RenderStatus @default(QUEUED)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
