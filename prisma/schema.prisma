@@ -53,17 +53,34 @@ model Point {
   createdAt DateTime @default(now())
 }
 
-// A captured take: screen/cam/mic as separate tracks so layout can change later.
-// A project can have more than one (missed-point rescue adds another).
+enum RecordingKind {
+  SCREEN
+  CAMERA
+  MIC
+}
+
+enum RecordingStatus {
+  UPLOADING
+  READY
+  FAILED
+}
+
+// One row per captured track (screen/camera/mic), not per take — a take is
+// just every Recording sharing a startOffsetMs=0 baseline for a given
+// recording session. Chunks upload under storageKeyPrefix as they arrive;
+// concatenation happens later in the pipeline, not here.
 model Recording {
-  id              String   @id @default(cuid())
-  projectId       String
-  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  screenUrl       String?
-  camUrl          String?
-  micUrl          String?
-  durationSeconds Int?
-  createdAt       DateTime @default(now())
+  id               String          @id @default(cuid())
+  projectId        String
+  project          Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind             RecordingKind
+  mimeType         String
+  storageKeyPrefix String
+  startOffsetMs    Int
+  durationMs       Int?
+  status           RecordingStatus @default(UPLOADING)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 }
 
 enum RenderStatus {

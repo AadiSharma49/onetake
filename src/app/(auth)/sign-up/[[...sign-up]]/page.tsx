@@ -157,6 +157,11 @@ export default function SignUpPage() {
                 Sign in
               </Link>
             </p>
+
+            {/* Clerk's bot-protection challenge mounts into this element when
+                it decides a sign-up needs one — without it, a flagged sign-up
+                hangs on "Verifying your request" forever. */}
+            <div id="clerk-captcha" />
         </>
       ) : (
         <>
