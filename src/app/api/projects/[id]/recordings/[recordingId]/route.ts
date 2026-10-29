@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/db/prisma";
+import { enqueueTranscription } from "@/lib/queue/enqueue-transcription";
 
 const VALID_STATUSES = ["READY", "FAILED"] as const;
 
@@ -33,6 +34,21 @@ export async function PATCH(
     where: { id: recordingId },
     data: { status, durationMs: typeof durationMs === "number" ? durationMs : undefined },
   });
+
+  // Only the mic track has speech worth transcribing. A queue hiccup here
+  // shouldn't fail the recording save itself — the status stays whatever
+  // it was, and this can be retried separately from the upload flow.
+  if (updated.status === "READY" && updated.kind === "MIC") {
+    try {
+      await prisma.recording.update({
+        where: { id: recordingId },
+        data: { transcriptStatus: "PENDING" },
+      });
+      await enqueueTranscription(recordingId);
+    } catch (err) {
+      console.error("Could not enqueue transcription:", err);
+    }
+  }
 
   return NextResponse.json({ status: updated.status });
 }

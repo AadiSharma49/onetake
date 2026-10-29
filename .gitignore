@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!**/.env.example
 
 # vercel
 .vercel
@@ -40,3 +42,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .neon
+
+# worker (Python)
+worker/__pycache__/
+worker/**/__pycache__/
+worker/.venv/
+worker/*.egg-info/

@@ -65,6 +65,14 @@ enum RecordingStatus {
   FAILED
 }
 
+enum TranscriptStatus {
+  NONE
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
 // One row per captured track (screen/camera/mic), not per take — a take is
 // just every Recording sharing a startOffsetMs=0 baseline for a given
 // recording session. Chunks upload under storageKeyPrefix as they arrive;
@@ -81,6 +89,12 @@ model Recording {
   status           RecordingStatus @default(UPLOADING)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
+
+  // Only ever populated for the MIC track — the pipeline's transcription
+  // worker writes these two fields directly via raw SQL (no Prisma on the
+  // Python side), so they stay simple scalar/JSON rather than a relation.
+  transcriptStatus TranscriptStatus @default(NONE)
+  transcriptJson   Json?
 }
 
 enum RenderStatus {
